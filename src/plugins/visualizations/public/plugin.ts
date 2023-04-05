@@ -220,6 +220,7 @@ export class VisualizationsPlugin
     });
     setSavedAugmentVisLoader(savedAugmentVisLoader);
     setSavedSearchLoader(savedSearchLoader);
+
     return {
       ...types,
       showNewVisModal,
@@ -229,7 +230,7 @@ export class VisualizationsPlugin
        * @param {VisState} visState - visualization configuration
        */
       createVis: async (visType: string, visState: SerializedVis) => {
-        const vis = new Vis(visType);
+        const vis = new Vis(visType, visState);
         await vis.setState(visState);
         return vis;
       },

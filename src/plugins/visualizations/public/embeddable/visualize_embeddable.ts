@@ -73,6 +73,7 @@ import {
   buildPipelineFromAugmentVisSavedObjs,
 } from '../../../vis_augmenter/public';
 import { VisSavedObject } from '../types';
+import { PointInTimeEventsVisLayer, VisLayer, VisLayerTypes } from '../../../vis_augmenter/public';
 
 const getKeys = <T extends {}>(o: T): Array<keyof T> => Object.keys(o) as Array<keyof T>;
 
@@ -91,6 +92,7 @@ export interface VisualizeInput extends EmbeddableInput {
   };
   savedVis?: SerializedVis;
   table?: unknown;
+  visLayerResourceIds?: string[];
 }
 
 export interface VisualizeOutput extends EmbeddableOutput {
@@ -136,6 +138,8 @@ export class VisualizeEmbeddable
   >;
   private savedVisualizationsLoader?: SavedVisualizationsLoader;
   private savedAugmentVisLoader?: SavedAugmentVisLoader;
+  public visLayerResourceIds?: string[];
+  public visLayers?: VisLayer[];
 
   constructor(
     timefilter: TimefilterContract,
@@ -171,6 +175,7 @@ export class VisualizeEmbeddable
     this.attributeService = attributeService;
     this.savedVisualizationsLoader = savedVisualizationsLoader;
     this.savedAugmentVisLoader = savedAugmentVisLoader;
+    this.visLayerResourceIds = initialInput.visLayerResourceIds;
     this.autoRefreshFetchSubscription = timefilter
       .getAutoRefreshFetch$()
       .subscribe(this.updateHandler.bind(this));
@@ -404,7 +409,49 @@ export class VisualizeEmbeddable
     this.abortController = new AbortController();
     const abortController = this.abortController;
 
-    const visLayers = await this.fetchVisLayers(expressionParams, abortController);
+    // const visLayers = await this.fetchVisLayers(expressionParams, abortController);
+    const visLayers = [
+      {
+        originPlugin: 'test-plugin',
+        type: VisLayerTypes.PointInTimeEvents,
+        pluginResource: {
+          type: 'test-resource-type',
+          id: 'test-plugin-resource-id',
+          name: 'test-plugin-resource-name',
+          urlPath: 'test-plugin-resource-path',
+        },
+        events: [
+          {
+            timestamp: 1670918400000,
+            metadata: {
+              pluginResourceId: 'test-plugin-resource-id',
+            },
+          },
+          {
+            timestamp: 1672128000000,
+            metadata: {
+              pluginResourceId: 'test-plugin-resource-id',
+            },
+          },
+          {
+            timestamp: 1673251200000,
+            metadata: {
+              pluginResourceId: 'test-plugin-resource-id',
+            },
+          },
+        ],
+      },
+    ] as PointInTimeEventsVisLayer[];
+
+    // If visLayerResourceIds is defined on the input, then filter out the found
+    // VisLayers to only include ones in that specified list.
+    // By default, do no filtering.
+    this.visLayers =
+      this.visLayerResourceIds === undefined
+        ? visLayers
+        : visLayers.filter((visLayer) =>
+            this.visLayerResourceIds?.includes(visLayer.pluginResource.id)
+          );
 
     this.expression = await buildPipeline(this.vis, {
       timefilter: this.timefilter,

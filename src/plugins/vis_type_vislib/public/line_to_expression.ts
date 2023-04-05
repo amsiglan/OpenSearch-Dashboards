@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { get } from 'lodash';
 import { buildVislibDimensions, Vis } from '../../visualizations/public';
 import { buildExpression, buildExpressionFunction } from '../../expressions/public';
 import { OpenSearchaggsExpressionFunctionDefinition } from '../../data/common/search/expressions';
@@ -53,6 +54,7 @@ export const toExpressionAst = async (vis: Vis, params: any) => {
     // spec via 'line_vega_spec' fn, then set as the arg for the final 'vega' fn
     const vegaFn = buildExpressionFunction<VegaExpressionFunctionDefinition>('vega', {
       spec: vegaSpecFnExpressionBuilder,
+      savedObjectId: get(vis, 'id', ''),
     });
     const ast = buildExpression([opensearchaggsFn, vegaFn]);
     return ast.toAst();
