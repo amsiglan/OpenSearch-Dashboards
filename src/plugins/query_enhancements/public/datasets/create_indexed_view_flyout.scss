@@ -1,0 +1,12 @@
+/*
+* This is required so that the help callout stays at the bottom of the flyout
+*/
+.createIndexedView__flyoutBody {
+  > div {
+    height: 100%;
+
+    > div {
+      height: 100%;
+    }
+  }
+}

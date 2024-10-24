@@ -6,6 +6,8 @@
 import { i18n } from '@osd/i18n';
 import { trimEnd } from 'lodash';
 import { HttpSetup, SavedObjectsClientContract } from 'opensearch-dashboards/public';
+import React from 'react';
+import { EuiButtonEmpty, EuiHorizontalRule } from '@elastic/eui';
 import {
   DATA_STRUCTURE_META_TYPES,
   DEFAULT_DATA,
@@ -23,8 +25,15 @@ import {
   S3_PARTITION_INFO_COLUMN,
   SQLQueryResponse,
   handleQueryStatus,
+  SEARCH_STRATEGY,
 } from '../../common';
 import S3_ICON from '../assets/s3_mark.svg';
+import {
+  indexedViewsService,
+  getLoadingCalloutContent,
+  CreateIndexedViewFlyout,
+} from './create_indexed_view_flyout';
+import { toMountPoint } from '../../../opensearch_dashboards_react/public';
 
 export const s3TypeConfig: DatasetTypeConfig = {
   id: DATASET.S3,
@@ -118,6 +127,9 @@ export const s3TypeConfig: DatasetTypeConfig = {
   },
 
   supportedLanguages: (dataset: Dataset): string[] => {
+    if (dataset.type === DATASET.S3 && dataset.indexedView) {
+      return ['SQL', 'PPL'];
+    }
     return ['SQL'];
   },
 
@@ -142,6 +154,65 @@ export const s3TypeConfig: DatasetTypeConfig = {
           },
         ];
     }
+  },
+  indexedViewsService,
+  getSearchOptions: (dataset: Dataset, services?: IDataPluginServices) => {
+    let strategy: string | undefined;
+
+    if (dataset.type === DATASET.S3 && dataset.indexedView) {
+      switch (dataset.language) {
+        case 'SQL':
+          strategy = SEARCH_STRATEGY.SQL;
+        case 'PPL':
+          strategy = SEARCH_STRATEGY.PPL;
+      }
+    }
+
+    const showCreateFlyout = () => {
+      const flyout = services?.overlays?.openFlyout(
+        toMountPoint(
+          <CreateIndexedViewFlyout
+            onClose={() => flyout?.close()}
+            services={services}
+            onSubmit={(_params) => {
+              return new Promise((res) => {
+                setTimeout(() => res(), 5000);
+              });
+            }}
+          />
+        )
+      );
+    };
+
+    return {
+      strategy,
+      getBannerProps: (status: string) => {
+        if (status === 'loading' && !dataset.indexedView) {
+          return {
+            componentType: 'callout',
+            title: i18n.translate('queryEnhancements.datasets.createIndexedViewCalloutTitle', {
+              defaultMessage: 'Improve query performance by ingesting relevant data for this query',
+            }),
+            iconType: 'iInCircle',
+            content: getLoadingCalloutContent(showCreateFlyout),
+          };
+        } else if (status === 'ready' || status === 'error') {
+          return {
+            componentType: 'custom',
+            content: (
+              <>
+                <EuiButtonEmpty onClick={showCreateFlyout} iconType="bolt" iconSide="left">
+                  {i18n.translate('queryEnhancements.datasets.createIndexedViewButtonText', {
+                    defaultMessage: 'Create indexed view',
+                  })}
+                </EuiButtonEmpty>
+                <EuiHorizontalRule margin="none" size="full" />
+              </>
+            ),
+          };
+        }
+      },
+    };
   },
 };
 
