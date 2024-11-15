@@ -48,7 +48,7 @@ import {
 } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
 import { FormattedMessage } from '@osd/i18n/react';
-import React, { OptionHTMLAttributes, ReactNode, useState } from 'react';
+import React, { OptionHTMLAttributes, ReactNode, useCallback, useEffect, useState } from 'react';
 
 export const NUM_FILTERS = 3;
 
@@ -76,6 +76,7 @@ export interface Props {
    */
   types: string[];
   isEnhancementsEnabledOverride: boolean;
+  showMissingFields?: boolean;
 }
 
 /**
@@ -87,6 +88,7 @@ export function DiscoverFieldSearch({
   value,
   types,
   isEnhancementsEnabledOverride,
+  showMissingFields,
 }: Props) {
   const searchPlaceholder = i18n.translate('discover.fieldChooser.searchPlaceHolder', {
     defaultMessage: 'Search field names',
@@ -112,7 +114,7 @@ export function DiscoverFieldSearch({
     searchable: 'any',
     aggregatable: 'any',
     type: 'any',
-    missing: true,
+    missing: typeof showMissingFields === 'boolean' ? !showMissingFields : true,
   });
 
   const filterBtnAriaLabel = isPopoverOpen
@@ -127,54 +129,65 @@ export function DiscoverFieldSearch({
     setPopoverOpen(!isPopoverOpen);
   };
 
-  const applyFilterValue = (id: string, filterValue: string | boolean) => {
-    switch (filterValue) {
-      case 'any':
-        if (id !== 'type') {
-          onChange(id, undefined);
-        } else {
+  const applyFilterValue = useCallback(
+    (id: string, filterValue: string | boolean) => {
+      switch (filterValue) {
+        case 'any':
+          if (id !== 'type') {
+            onChange(id, undefined);
+          } else {
+            onChange(id, filterValue);
+          }
+          break;
+        case 'true':
+          onChange(id, true);
+          break;
+        case 'false':
+          onChange(id, false);
+          break;
+        default:
           onChange(id, filterValue);
-        }
-        break;
-      case 'true':
-        onChange(id, true);
-        break;
-      case 'false':
-        onChange(id, false);
-        break;
-      default:
-        onChange(id, filterValue);
-    }
-  };
+      }
+    },
+    [onChange]
+  );
 
-  const isFilterActive = (name: string, filterValue: string | boolean) => {
+  const isFilterActive = useCallback((name: string, filterValue: string | boolean) => {
     return name !== 'missing' && filterValue !== 'any';
-  };
+  }, []);
 
-  const handleValueChange = (name: string, filterValue: string | boolean) => {
-    const previousValue = values[name];
-    updateFilterCount(name, previousValue, filterValue);
-    const updatedValues = { ...values };
-    updatedValues[name] = filterValue;
-    setValues(updatedValues);
-    applyFilterValue(name, filterValue);
-  };
+  const updateFilterCount = useCallback(
+    (name: string, previousValue: string | boolean, currentValue: string | boolean) => {
+      const previouslyFilterActive = isFilterActive(name, previousValue);
+      const filterActive = isFilterActive(name, currentValue);
+      const diff = Number(filterActive) - Number(previouslyFilterActive);
+      setActiveFiltersCount(activeFiltersCount + diff);
+    },
+    [isFilterActive, activeFiltersCount, setActiveFiltersCount]
+  );
 
-  const updateFilterCount = (
-    name: string,
-    previousValue: string | boolean,
-    currentValue: string | boolean
-  ) => {
-    const previouslyFilterActive = isFilterActive(name, previousValue);
-    const filterActive = isFilterActive(name, currentValue);
-    const diff = Number(filterActive) - Number(previouslyFilterActive);
-    setActiveFiltersCount(activeFiltersCount + diff);
-  };
+  const handleValueChange = useCallback(
+    (name: string, filterValue: string | boolean) => {
+      const previousValue = values[name];
+      updateFilterCount(name, previousValue, filterValue);
+      const updatedValues = { ...values };
+      updatedValues[name] = filterValue;
+      setValues(updatedValues);
+      applyFilterValue(name, filterValue);
+    },
+    [values, updateFilterCount, setValues, applyFilterValue]
+  );
 
   const handleMissingChange = (e: EuiSwitchEvent) => {
     const missingValue = e.target.checked;
     handleValueChange('missing', missingValue);
   };
+
+  useEffect(() => {
+    if (showMissingFields === true) {
+      handleValueChange('missing', false);
+    }
+  }, [showMissingFields, handleValueChange]);
 
   const select = (
     id: string,

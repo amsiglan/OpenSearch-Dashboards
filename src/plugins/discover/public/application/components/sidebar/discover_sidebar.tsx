@@ -97,6 +97,7 @@ export interface DiscoverSidebarProps {
    */
   selectedIndexPattern?: IndexPattern;
   isEnhancementsEnabledOverride: boolean;
+  showMissingFields?: boolean;
 }
 
 export function DiscoverSidebar(props: DiscoverSidebarProps) {
@@ -110,6 +111,7 @@ export function DiscoverSidebar(props: DiscoverSidebarProps) {
     onCreateIndexPattern,
     selectedIndexPattern,
     isEnhancementsEnabledOverride,
+    showMissingFields,
   } = props;
   const [fields, setFields] = useState<IndexPatternField[] | null>(null);
   const [fieldFilterState, setFieldFilterState] = useState(getDefaultFieldFilter());
@@ -221,6 +223,7 @@ export function DiscoverSidebar(props: DiscoverSidebarProps) {
               value={fieldFilterState.name}
               types={fieldTypes}
               isEnhancementsEnabledOverride={isEnhancementsEnabledOverride}
+              showMissingFields={showMissingFields}
             />
           </EuiSplitPanel.Inner>
           {displayIndexPatternCreation(selectedIndexPattern) ? (

@@ -56,6 +56,8 @@ export interface DatasetTypeConfig {
     isFieldLoadAsync?: boolean;
     /** Optional cacheOptions determines if the data structure is cacheable. Defaults to false */
     cacheOptions?: boolean;
+    /** Whether missing fields should be shown by default in the side panel */
+    showMissingFields?: boolean;
   };
   /**
    * Converts a DataStructure to a Dataset.

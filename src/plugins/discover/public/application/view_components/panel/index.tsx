@@ -27,7 +27,7 @@ export default function DiscoverPanel(props: ViewProps) {
   const { services } = useOpenSearchDashboards<DiscoverViewServices>();
   const {
     data: {
-      query: { filterManager },
+      query: { filterManager, queryString },
     },
     capabilities,
     indexPatterns,
@@ -104,6 +104,13 @@ export default function DiscoverPanel(props: ViewProps) {
     UI_SETTINGS.QUERY_ENHANCEMENTS_ENABLED
   );
 
+  const { dataset } = queryString.getQuery();
+  let showMissingFields: boolean | undefined;
+  if (dataset) {
+    const datasetTypeConfig = queryString.getDatasetService().getType(dataset.type);
+    showMissingFields = datasetTypeConfig?.meta.showMissingFields;
+  }
+
   return (
     <DiscoverSidebar
       columns={columns || []}
@@ -141,6 +148,7 @@ export default function DiscoverPanel(props: ViewProps) {
       onNormalize={() => {}}
       onAddFilter={onAddFilter}
       isEnhancementsEnabledOverride={isEnhancementsEnabledOverride}
+      showMissingFields={showMissingFields}
     />
   );
 }
